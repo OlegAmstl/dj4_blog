@@ -3,6 +3,15 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 
+class PublishedManager(models.Manager):
+    """
+    Менеджер для опубликованных постов.
+    """
+
+    def get_queryset(self):
+        return super().get_queryset().filter(status=Post.Status.PUBLISHED)
+
+
 class Post(models.Model):
     """
     Модель поста блога.
@@ -25,6 +34,8 @@ class Post(models.Model):
                               choices=Status.choices,
                               default=Status.DRAFT)
 
+    object = models.Manager()
+    published = PublishedManager()
 
     class Meta:
         ordering = ["-publish"]
