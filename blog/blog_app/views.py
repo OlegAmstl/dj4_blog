@@ -15,7 +15,7 @@ def post_list(request):
     return render(request, template, context=context)
 
 
-def post_detail(request, id):
+def post_detail(request, year, month, day, post):
     """
     Отображение выбранного поста.
     :param request:
@@ -23,6 +23,11 @@ def post_detail(request, id):
     :return:
     """
     template = "blog_app/post/detail.html"
-    post = get_object_or_404(Post, id=id, status=Post.Status.PUBLISHED)
+    post = get_object_or_404(Post,
+                             status=Post.Status.PUBLISHED,
+                             slug=post,
+                             publish__year=year,
+                             publish__month=month,
+                             publish__day=day)
     context = {"post": post}
     return render(request, template, context=context)
