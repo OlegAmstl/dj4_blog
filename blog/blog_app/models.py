@@ -40,7 +40,7 @@ class Post(models.Model):
 
     objects = models.Manager()
     published = PublishedManager()
-    tags = TaggableManager()
+    tags = TaggableManager() # тегированние
 
     class Meta:
         ordering = ["-publish"]
