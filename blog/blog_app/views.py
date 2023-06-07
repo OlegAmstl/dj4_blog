@@ -1,39 +1,46 @@
+from django.core.paginator import PageNotAnInteger, EmptyPage, Paginator
 from django.shortcuts import render, get_object_or_404
-from django.views.generic import ListView
 from django.views.decorators.http import require_POST
+from django.db.models import Count
+from taggit.models import Tag
 
-from .models import Post, Comment
+from .models import Post
 from .forms import EmailPostForm, CommentForm
 
 
-class PostList(ListView):
-    """
-    Отображение всех постов
-    """
-    queryset = Post.published.all()
-    context_object_name = "posts"
-    paginate_by = 3
-    template_name = "blog_app/post/list.html"
+# class PostList(ListView):
+#     """
+#     Отображение всех постов
+#     """
+#     queryset = Post.published.all()
+#     context_object_name = "posts"
+#     paginate_by = 3
+#     template_name = "blog_app/post/list.html"
 
 
-# def post_list(request):
-#     """
-#     Отображение всех постов.
-#     :param request:
-#     :return:
-#     """
-#     template = "blog_app/post/list.html"
-#     posts = Post.published.all()
-#     paginator = Paginator(posts, 3)
-#     page_number = request.GET.get("page", 1)
-#     try:
-#         posts_list = paginator.page(page_number)
-#     except PageNotAnInteger:
-#         posts_list = paginator.page(1)
-#     except EmptyPage:
-#         posts_list = paginator.page(paginator.num_pages)
-#     context = {"posts": posts_list}
-#     return render(request, template, context=context)
+def post_list(request, tag_slug=None):
+    """
+    Отображение всех постов.
+    :param request:
+    :return:
+    """
+    template = "blog_app/post/list.html"
+    posts = Post.published.all()
+    tag = None
+    if tag_slug:
+        tag = get_object_or_404(Tag, slug=tag_slug)
+        posts = posts.filter(tags__in=[tag])
+    paginator = Paginator(posts, 3)
+    page_number = request.GET.get("page", 1)
+    try:
+        posts_list = paginator.page(page_number)
+    except PageNotAnInteger:
+        posts_list = paginator.page(1)
+    except EmptyPage:
+        posts_list = paginator.page(paginator.num_pages)
+    context = {"posts": posts_list,
+               "tag": tag}
+    return render(request, template, context=context)
 
 
 def post_detail(request, year, month, day, post):
@@ -51,10 +58,20 @@ def post_detail(request, year, month, day, post):
                              publish__month=month,
                              publish__day=day)
     comments = post.comments.filter(active=True)
+
+    # Формв комментариев
     form = CommentForm()
+
+    # Список схожих постов
+    post_tags_ids = post.tags.values_list('id', flat=True)
+    similar_posts = Post.published.filter(
+        tags__in=post_tags_ids).exclude(id=post.id)
+    similar_posts = similar_posts.annotate(
+        same_tags=Count('tags')).order_by('-same_tags', '-publish')[:4]
     context = {"post": post,
                "comments": comments,
-               "form": form}
+               "form": form,
+               "similar_posts": similar_posts}
     return render(request, template, context=context)
 
 
